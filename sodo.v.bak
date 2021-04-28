@@ -1,0 +1,1751 @@
+module finaltest(CLOCK_50, SW,KEY, PS2_CLK, PS2_DAT, 
+		VGA_HS,VGA_VS, VGA_BLANK_N,VGA_SYNC_N, VGA_R,VGA_G,VGA_B,VGA_CLK);
+
+	input CLOCK_50;
+	input [9:0]SW;
+	input [3:0]KEY;
+	
+	input PS2_CLK;
+	input PS2_DAT;
+	
+	
+	output VGA_HS;
+	output VGA_VS;
+	output			VGA_BLANK_N;				//	VGA BLANK
+	output			VGA_SYNC_N;				//	VGA SYNC	
+	output  [7:0] VGA_R;                // VGA red component
+   output  [7:0] VGA_G;               // VGA green component
+   output  [7:0] VGA_B; 
+	output VGA_CLK;
+	
+	
+	wire key_up; 
+	wire key_down;
+	wire key_left;
+	wire key_right;
+	
+
+	wire key_space;
+	wire key_delete;
+
+	wire key_num1;
+	wire key_num2;
+	wire key_num3;
+	wire key_num4;
+	wire key_num5;
+	wire key_num6;
+	wire key_num7;
+	wire key_num8;
+	wire key_num9;
+
+
+	wire [323:0] board_occu;
+	wire [31:0] clk_div;
+	wire [3:0] cursor_i;
+	wire [3:0] cursor_j;
+	wire [9:0] cursor_x;
+	wire [8:0] cursor_y;
+	wire [9:0] cursor_xold;
+	wire [8:0] cursor_yold;
+	wire [8:0] cursor_ij; 
+	wire data_clr;
+	wire data_write;
+	wire [3:0]input_num;
+	wire game_running;
+	wire over_page;
+	wire easy_mode;
+    wire medium_mode;
+    wire hard_mode;
+	wire isCorrect;
+	wire erase_complete;
+	wire game_start_received;
+	wire board_render_complete;
+	wire board_top_plot;
+	wire start_page;
+	wire wrong;
+	wire cursor;
+	wire erase;
+	
+	//wire start_render_board;
+
+wire clk_12_5mhz;
+	wire clk_1khz;
+	wire clk_10khz;
+	//wire data_write;
+
+	wire writeEn;
+	//wire doneFrame;
+	reg [9:0] x;
+	reg [8:0] y;
+	reg [5:0]color;
+	wire [3:0] view_x, view_y;
+	wire reset_clock;
+	//clk_divider divider(CLOCK_50, SW[9], clk_div);
+	wire [3:0]piece_read;
+	
+
+	control crl(clk_div[9],clk_div[6],SW[9],key_up, key_down, SW[7], key_right,SW[8], SW[6],
+	SW[5],key_num2,key_num3,
+	key_num4,key_num5,key_num6, key_num7,key_num8,key_num9, board_occu,
+	cursor_i,cursor_j,cursor_ij,cursor_x, cursor_y, cursor_xold,cursor_yold, data_clr, data_write,input_num,game_running,num_delete,easy_mode, medium_mode, hard_mode,over_page,board_top_plot,start_page,wrong,cursor,erase,isCorrect);
+
+	sudoku_datapath data(clk_div[9],SW[9],data_clr,data_write,cursor_ij, input_num, easy_mode, medium_mode, hard_mode, board_occu);
+
+	ps2_input keyboard(clk_div[9], clk_div[6], SW[9], PS2_CLK, PS2_DAT, key_up, key_down, key_left, key_right,
+	key_space, key_delete, key_num1,key_num2,key_num3,key_num4,key_num5,key_num6, key_num7,key_num8,key_num9);
+    
+   //vga_display display(CLOCK_50, SW[9], reset_clock, cursor_i,cursor_j, game_running,num_delete, over_page, isCorrect, piece_read,
+					//x,y,view_x, view_y,color, erase_complete, game_start_received, board_render_complete, writeEn);
+					
+	 //display_num dis(CLOCK_50,input_num, board_top_plot, start_page, over_page, cursor_x, cursor_y, data_write,num_delete,earse,wrong,color, x,y, writeEn);
+
+
+	clk_div4 divider25(CLOCK_50, SW[9],clk_12_5mhz);
+	clk_divider div(CLOCK_50, SW[9], clk_div);
+	reg [9:0] x0bt, x0bb,x0st, x0sb, x0wt, x0wb;
+ reg [8:0] y0bt, y0bb,y0st, y0sb, y0wt, y0wb;
+ 
+//draw gameboard
+ wire [9:0]xbtCount, xbbCount;
+ wire [8:0]ybtCount,ybbCount;
+ wire [15:0]btaddress, bbaddress;
+ wire [5:0]btcolor, bbcolor;
+ wire done1,done2;
+ btop ggg(btaddress, clk, btcolor);
+ bbot gg(bbaddress, clk, bbcolor);
+ draw_board b1(clk, board_top_plot, xbtCount, ybtCount, btaddress, done1);
+ draw_board b2(clk, done1, xbbCount, ybbCount, bbaddress, done2);
+ 
+ //draw startpage
+ wire [9:0]xstCount, xsbCount;
+ wire [8:0]ystCount,ysbCount;
+ wire [15:0]staddress, sbaddress;
+ wire [5:0]stcolor, sbcolor;
+ wire done3,done4;
+ starttop st(staddress, clk, stcolor);
+ startbot sb(sbaddress, clk, sbcolor);
+ draw_board s1(clk, start_page, xstCount, ystCount, staddress, done3);//enable1?
+ draw_board s2(clk, done3, xsbCount, ysbCount, sbaddress, done4);
+ 
+ //draw winpage
+ wire [9:0]xwtCount, xwbCount;
+ wire [8:0]ywtCount,ywbCount;
+ wire [15:0]wtaddress, wbaddress;
+ wire [5:0]wtcolor, wbcolor;
+ wire done5,done6;
+ wintop stttt(wtaddress, clk, wtcolor);
+ winbot sbbbb(wbaddress, clk, wbcolor);
+ draw_board w1(clk, over_page, wstCount, wstCount, wtaddress, done5);//enable2?
+ draw_board w2(clk, done5, wsbCount, wsbCount, wbaddress, done6);
+ 
+ 
+//buggggggg here no initial
+ initial begin
+   //gameboard
+ 	x0bt<=0;
+ 	y0bt<=0;
+ 	x0bb<=0;
+ 	y0bb<=9'd120;
+	
+	//startpage
+	x0st<=0;
+ 	y0st<=0;
+ 	x0sb<=0;
+ 	y0sb<=9'd120;
+	
+	//winpage
+	x0wt<=0;
+ 	y0wt<=0;
+ 	x0wb<=0;
+ 	y0wb<=9'd120;
+	
+ end
+
+
+ 
+ reg [9:0]num_x;
+ reg [8:0]num_y;
+
+ 
+ wire [4:0] xCount1,xCount2,xCount3,xCount4,xCount5,xCount6,xCount7,xCount8,xCount9,xCount0;
+ wire [4:0] yCount1,yCount2,yCount3,yCount4,yCount5,yCount6,yCount7,yCount8,yCount9,yCount0;
+ wire [4:0] xCounti1,xCounti2,xCounti3,xCounti4,xCounti5,xCounti6,xCounti7,xCounti8,xCounti9;
+ wire [4:0] yCounti1,yCounti2,yCounti3,yCounti4,yCounti5,yCounti6,yCounti7,yCounti8,yCounti9;
+ wire [4:0] xCountc1,xCountc2,xCountc3,xCountc4,xCountc5,xCountc6,xCountc7,xCountc8,xCountc9,xCountc0;
+ wire [4:0] yCountc1,yCountc2,yCountc3,yCountc4,yCountc5,yCountc6,yCountc7,yCountc8,yCountc9,yCountc0;
+ wire [8:0]  address1,address2,address3,address4,address5,address6,address7,address8,address9,address0;
+ wire [8:0]  addressi1,addressi2,addressi3,addressi4,addressi5,addressi6,addressi7,addressi8,addressi9;
+ wire [8:0]  addressc1,addressc2,addressc3,addressc4,addressc5,addressc6,addressc7,addressc8,addressc9,addressc0;
+ wire [5:0] color1,color2,color3,color4,color5,color6,color7,color8,color9,color0;
+ wire [5:0] colori1,colori2,colori3,colori4,colori5,colori6,colori7,colori8,colori9;
+ wire [5:0] curr1_color,curr2_color,curr3_color,curr4_color,curr5_color,curr6_color,curr7_color,curr8_color,curr9_color;
+ wire [9:0] done,donei,donec;
+ 
+ initial begin
+	num_x <= cursor_x+1;
+	num_y <= cursor_y+1;
+ end 
+ 
+ num1 n1(address1, clk, color1);
+ num2 n2(address2, clk, color2);
+ num3 n3(address3, clk, color3);
+ num4 n4(address4, clk, color4);
+ num5 n5(address5, clk, color5);
+ num6 n6(address6, clk, color6);
+ num7 n7(address7, clk, color7);
+ num8 n8(address8, clk, color8);
+ num9 n9(address9, clk, color9);
+ blk n0(address0, clk, color0);//blank box
+ 
+ drawNum n1d(clk, data_write, xCount1, yCount1, address1, done[0]);
+ drawNum n2d(clk, data_write, xCount2, yCount2, address2, done[1]);
+ drawNum n3d(clk, data_write, xCount3, yCount3, address3, done[2]);
+ drawNum n4d(clk, data_write, xCount4, yCount4, address4, done[3]);
+ drawNum n5d(clk, data_write, xCount5, yCount5, address5, done[4]);
+ drawNum n6d(clk, data_write, xCount6, yCount6, address6, done[5]);
+ drawNum n7d(clk, data_write, xCount7, yCount7, address7, done[6]);
+ drawNum n8d(clk, data_write, xCount8, yCount8, address8, done[7]);
+ drawNum n9d(clk, data_write, xCount9, yCount9, address9, done[8]);
+ drawNum n0d(clk, data_write, xCount0, yCount0, address0, done[9]);
+ 
+ incorrect1 ni1(addressi1, clk, colori1);
+ incorrect2 ni2(addressi2, clk, colori2);
+ incorrect3 ni3(addressi3, clk, colori3);
+ incorrect4 ni4(addressi4, clk, colori4);
+ incorrect5 ni5(addressi5, clk, colori5);
+ incorrect6 ni6(addressi6, clk, colori6);
+ incorrect7 ni7(addressi7, clk, colori7);
+ incorrect8 ni8(addressi8, clk, colori8);
+ incorrect9 ni9(addressi9, clk, colori9);
+ 
+ drawNum n1w(clk, wrong, xCounti1, yCounti1, addressi1, donei[0]);
+ drawNum n2w(clk, wrong, xCounti2, yCounti2, addressi2, donei[1]);
+ drawNum n3w(clk, wrong, xCounti3, yCounti3, addressi3, donei[2]);
+ drawNum n4w(clk, wrong, xCounti4, yCounti4, addressi4, donei[3]);
+ drawNum n5w(clk, wrong, xCounti5, yCounti5, addressi5, donei[4]);
+ drawNum n6w(clk, wrong, xCounti6, yCounti6, addressi6, donei[5]);
+ drawNum n7w(clk, wrong, xCounti7, yCounti7, addressi7, donei[6]);
+ drawNum n8w(clk, wrong, xCounti8, yCounti8, addressi8, donei[7]);
+ drawNum n9w(clk, wrong, xCounti9, yCounti9, addressi9, donei[8]);
+ 
+ wire [4:0] xCounth1,xCounth2;
+ wire [1:0] yCounth1,yCounth2;
+ wire [1:0] xCountv1,xCountv2;
+ wire [4:0] yCountv1,yCountv2;
+ wire [5:0] colorh1,colorh2,colorv1,colorv2;
+ wire [4:0] addressh1,addressh2,addressv1,addressv2;
+ wire doneh1,doneh2,donev1,donev2;
+ row17 h17(addressh1, clk, colorh1);
+ row17 h171(addressh2, clk, colorh2);
+ col19 c19(addressv1, clk, colorv1);
+ col19 c191(addressv2, clk, colorv2);
+ 
+ draw_gridh h1(clk, cursor, xCounth1, yCounth1, addressh1, doneh1); 
+ draw_gridh h2(clk, doneh1, xCounth2, yCounth2, addressh2, doneh2); 
+ draw_gridv v1(clk, doneh2, xCountv1, yCountv1, addressv1, donev1); 
+ draw_gridv v2(clk, donev1, xCountv2, yCountv2, addressv2, donev2); 
+ 
+ 
+ reg inB;
+ reg inC;
+ 
+ always@(posedge 	CLOCK_50) begin
+	//startpage
+	if (start_page) begin
+		x <= xstCount+x0st;
+		y <= ystCount+y0st;
+		color <= sbcolor;
+		writeEn <= 1'b1;
+	 if(done3) begin
+		x <= xsbCount+x0sb;
+		y <= ysbCount+y0sb;
+		color <= sbcolor;
+		writeEn <= 1'b1;
+		end
+	end
+//gameboard
+	else if (board_top_plot) begin
+	
+		writeEn <= 1'b1;
+		x <= xbtCount+x0bt;
+		y <= ybtCount+y0bt;
+		color <= btcolor;
+		//color <= 6'b110000;
+		//in <= 1'b1;
+		if(done1) begin
+			x <= xbbCount+x0bb;
+			y <= ybbCount+y0bb;
+			color <= bbcolor;
+			inB<=1'b1;
+		//	color <= 6'b111110;
+		//	in <= 1'b0;
+		end
+		
+	end
+
+	
+ //winpage
+	else if (over_page) begin
+		writeEn <= 1'b1;
+			x <= xwtCount+x0wt;
+			y <= ywtCount+y0wt;
+			color <= wtcolor;
+		if(done5) begin
+			x <= xwbCount+x0wb;
+			y <= ywbCount+y0wb;
+			color <= wbcolor;
+		end
+	end
+	
+			
+
+	else if (done2 && cursor) begin
+			writeEn <= 1'b1;
+			inC<=1'b1;
+			x <= xCounth1+cursor_x;//horizontal 1
+			y <= yCounth1+cursor_y;
+			color <= colorh1;
+			  if(doneh1)  begin
+			  x <= xCounth2+cursor_x;//horizontal 2
+			  y <= yCounth2+cursor_y+5'd18;
+			  color <= colorh2;
+			     if(doneh2)  begin
+		       	x <= xCountv1+cursor_x;//veritcal 1
+		      	y <= yCountv1+cursor_y;
+			      color <= colorv1;
+	              if(donev1)  begin
+			         x <= xCountv2+cursor_x+5'd18;//veritcal 1
+		         	y <= yCountv2+cursor_y;
+			         color <= colorv2;
+						
+			         end
+					end
+				end
+			end
+	
+	else if (donev2 && earse) begin
+		writeEn <= 1'b1;
+			x <= xCounth1+cursor_x;//horizontal 1
+			y <= yCounth1+cursor_y;
+			color <= 6'b111111;
+			  if(doneh1)  begin
+			  x <= xCounth2+cursor_x;//horizontal 2
+			  y <= yCounth2+cursor_y+5'd18;
+			  color <= 6'b111111;
+			     if(doneh2)  begin
+		       	x <= xCountv1+cursor_x;//veritcal 1
+		      	y <= yCountv1+cursor_y;
+			      color <= 6'b111111;
+	              if(donev1)  begin
+			         x <= xCountv2+cursor_x+5'd18;//veritcal 1
+		         	y <= yCountv2+cursor_y;
+			         color <= 6'b111111;
+			         end
+					end
+				end
+			end
+	
+	else if (data_write) begin
+		writeEn <= 1'b1; 
+			
+		  if(input_num==4'd1)begin
+				x<=xCount1 + num_x;
+				y<=yCount1 + num_y;
+					if (wrong)begin
+						if (num_delete)
+							color <= 6'b111111;
+						else 
+							color <= colori1;
+							//color <= 6'b011111;
+						end
+					else
+						color <= color1;
+						//color <= 6'b000111;
+				end
+			else if(input_num==4'd2)begin
+					x<=xCount2 + num_x;
+				   y<=yCount2 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+			 			   	color <= 6'b111111;
+						   else 
+						   	color <= colori2;
+						end
+					else
+						color <= color2;
+					end
+			   else if(input_num==4'd3)begin
+					x<=xCount3 + num_x;
+				   y<=yCount3 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori3;
+					   	end
+				   	else
+					   	color <= color3;
+					   end
+		  	   else if(input_num==4'd4)begin
+					x<=xCount4 + num_x;
+				   y<=yCount4 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori5;
+					   	end
+					else
+						color <= color4;
+					end
+			   else if(input_num==4'd5)begin
+					x<=xCount5 + num_x;
+				   y<=yCount5 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori5;
+					   	end
+					else
+						color <= color5;
+					end
+			   else if(input_num==4'd6)begin
+					x<=xCount6 + num_x;
+				   y<=yCount6 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori6;
+					   	end
+					else
+						color <= color6;
+					end
+			   else if(input_num==4'd7)begin
+					x<=xCount7 + num_x;
+				   y<=yCount7 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori7;
+					   	end
+					else
+						color <= color7;
+					end
+			   else if(input_num==4'd8)begin
+					x<=xCount8 + num_x;
+				   y<=yCount8 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori8;
+					   	end
+					else
+						color <= color8;
+					end
+			   else if(input_num==4'd9)begin
+				   x<=xCount9 + num_x;
+				   y<=yCount9 + num_y;
+				   if (wrong) begin
+						if (num_delete)
+							color <= 6'b111111;
+						else 
+							color <= colori9;
+						end
+					else
+						color <= color9;
+					end
+		else 
+		 writeEn <= 1'b0; 
+			end
+			
+	end
+
+	/*vga_adapter VGA(
+		.resetn(SW[9]),
+		.clock(CLOCK_50),
+		.colour(color),
+		.x(x),
+		.y(y),
+		.plot(writeEn),
+		.VGA_R(VGA_R),
+		.VGA_G(VGA_G),
+		.VGA_B(VGA_B),
+		.VGA_HS(VGA_HS),
+		.VGA_VS(VGA_VS),
+		.VGA_BLANK(VGA_BLANK_N),
+		.VGA_SYNC(VGA_SYNC_N),
+		.VGA_CLK(VGA_CLK));
+	defparam VGA.RESOLUTION = "320x240";
+	defparam VGA.MONOCHROME = "FALSE";
+	defparam VGA.BITS_PER_COLOUR_CHANNEL = 2;
+	defparam VGA.BACKGROUND_IMAGE ="start.mif";
+	*/
+endmodule
+
+/*
+module rateDivider( clk, resetn, rate, counter); 
+   
+ 	output reg counter; 
+ 	input clk; 
+ 	input [23:0] rate; 
+ 	input resetn; 
+ 	 
+ 	reg [23:0]count; 
+ 	 
+ 	always @(posedge clk) 
+ 	 begin : Rate_Divider 
+ 			if (!resetn)begin 
+ 				count = rate; //12.5Mhz 
+ 				counter = 1'b0; 
+ 			end 
+ 			else begin 
+ 				if (count == 24'd0)begin 
+ 					count = rate; 
+ 					counter = 1'b1; 
+ 				end 
+ 				else if (count)begin 
+ 					count = count - 24'b1; 
+ 					counter = 1'b0; 
+ 				end 
+ 			end 
+ 	 end 
+ 
+ 
+ 	 endmodule 
+
+*/
+
+ 
+
+module clk_div4 ( clk ,reset,clk_out );
+
+	input clk;
+	input reset;
+
+	output clk_out;
+
+	reg [2:0] r_reg;
+
+	wire [1:0] r_nxt;
+
+	reg clk_track;
+
+	always @(posedge clk or negedge reset)
+	begin
+	if (! reset)
+		begin
+			r_reg <= 3'b0;
+		clk_track <= 1'b0;
+		end
+
+	else if (r_nxt == 2'b10)
+			begin
+			r_reg <= 0;
+			clk_track <= ~clk_track;
+			end
+	else 
+		r_reg <= r_nxt;
+	end
+	assign r_nxt = r_reg+1;   	      
+	assign clk_out = clk_track;
+
+endmodule
+/*
+module displaya(clk, enable, color, x,y, writeEn);
+	input clk, enable; 
+	output reg [5:0]color;
+	output reg [9:0]x;
+	output reg [8:0]y;
+	output reg writeEn;
+	wire donebt,donebb;
+
+	reg [9:0] x0bt, x0bb;
+	reg [8:0] y0bt, y0bb;
+	
+
+	wire [9:0]xbtCount, xbbCount;
+	wire [8:0]ybtCount,ybbCount;
+	wire [15:0]btaddress, bbaddress;
+	wire [5:0]btcolor, bbcolor;
+	wintop ggg(btaddress, clk, btcolor);
+	winbot gg(bbaddress, clk, bbcolor);
+	draw_board bt(clk, enable, xbtCount, ybtCount, btaddress, donebt);
+	draw_board bb(clk, donebt, xbbCount, ybbCount, bbaddress, donebb);
+	
+	
+
+	initial begin
+	x0bt<=0;
+	y0bt<=0;
+	
+	x0bb<=0;
+	y0bb<=9'd120;
+	end
+
+	always @ (posedge clk) begin
+	if (enable) begin
+		if(!donebt) begin
+			x <= xbtCount+x0bt;
+			y <= ybtCount+y0bt;
+			color <= btcolor;
+			writeEn <= 1'b1;
+		
+		end
+		else begin
+			x <= xbbCount+x0bb;
+			y <= ybbCount+y0bb;
+			color <= bbcolor;
+			writeEn <= 1'b1;
+		end
+
+	end
+
+	else 
+		writeEn <= 1'b0;
+
+	end
+	
+endmodule
+*/
+
+/*
+module displaya(clk, enable, color, x,y, writeEn);
+	input clk, enable; 
+	output reg [5:0]color;
+	output reg [8:0]x;
+	output reg [7:0]y;
+	output reg writeEn;
+	wire done;
+	
+	wire [8:0]xCount;
+	wire [7:0]yCount;
+	wire [15:0]imvaddress;
+	wire [5:0]imvcolor;
+	pika ggg(imvaddress, clk, imvcolor);
+	draw_board dr(clk, enable, xCount, yCount, imvaddress, done);
+	
+	
+	
+	always @ (posedge clk) begin
+		if (enable) begin
+			x <= xCount;
+			y <= yCount;
+			color <= imvcolor;
+			writeEn <= 1'b1;
+			end
+		else 
+			writeEn <= 1'b0;
+	end
+endmodule
+*/
+
+
+
+/*
+module vgaplay(clk, resetn, game_running, writeEn,colour,x,y);
+	input clk;
+	input resetn;
+	input game_running;
+	output reg writeEn;
+	output [2:0]colour;
+	output [8:0]x;
+	output [7:0]y;
+	
+	 //wire [8:0] num1_address, num2_address, num3_address, 
+            //num4_address, num5_address, num6_address,
+				//num7_address, num8_address, num9_address;
+				 
+  	//wire [1:0] num1_data, num2_data, num3_data, 
+            //num4_data, num5_data, num6_data,
+				//num7_data, num8_data, num9_data;
+	
+	//reg[4:0] x0_num1, draw_num1_x;
+	//reg[3:0] y0_num1, draw_num1_y;
+	reg [8:0] draw_bgtop_x, bgtop_counter_x;
+	reg [7:0] draw_bgtop_y, bgtop_counter_y;
+	reg [2:0] colour0_bgtop, out_color;
+	wire [7:0] board_address_top;
+   wire [2:0] board_data_top;
+  
+  imv ggg(board_address_top, clk, board_data_top);
+		
+		//num_pic
+	//num1 n1( num1_address,clk,num1_data);
+	//num2 n2( num2_address,clk,num2_data);
+	//num3 n3( num3_address,clk,num3_data);
+	//num4 n4( num4_address,clk,num4_data);
+	//num5 n5( num5_address,clk,num5_data);
+	//num6 n6( num6_address,clk,num6_data);
+   //num7 n7( num7_address,clk,num7_data);
+	//num8 n8( num8_address,clk,num8_data);
+	//num9 n9( num9_address,clk,num9_data);
+	
+	
+	//draw bg_top
+	always@(posedge clk) begin
+		if(game_running) begin
+			//x0_bgtop_x <= 9'b0;
+			//y0_bgtop_y <= 9'b0;
+			bgtop_counter_x<= 9'd0;
+			bgtop_counter_y<= 8'd0;
+			draw_bgtop_x<= 9'd0;
+			draw_bgtop_y<=8'd0;
+			out_color<=3'b0;
+			writeEn=1'b0;
+			
+		end
+		
+		else begin
+			
+			writeEn=1'b1;
+			draw_bgtop_x<=bgtop_counter_x;
+			draw_bgtop_y<=bgtop_counter_y;
+			bgtop_counter_x<=bgtop_counter_x+9'b1;
+			out_color<= board_data_top;
+			if(bgtop_counter_x== 9'd13) begin
+				bgtop_counter_y<=bgtop_counter_y+8'b1;
+				bgtop_counter_x<=0;
+				out_color<= board_data_top;
+			end
+			
+			if (bgtop_counter_y>=8'd11) begin
+				bgtop_counter_x<=0;
+				bgtop_counter_y<=0;
+				out_color<= 3'b100;
+				writeEn=1'b0;
+			end
+		end
+		
+	end
+			
+			
+	assign x=9'b0+ draw_bgtop_x;
+	assign y=9'b0+ draw_bgtop_y;
+	assign colour = out_color;
+	
+endmodule
+
+module counter(plot, clk, draw_counter_x,draw_counter_y);
+	always@(posedge clk) begin
+		if(plot == 1'b1) begin
+			if(draw_counter_x < 8'd20) 
+				draw_counter_x <= draw_counter_x + 8'd1;
+			else if (draw_counter_y< 8'd20) begin
+				draw_counter_x <= 8'd0;
+				draw_counter_y <= draw_counter_y + 8'd1;
+			end
+		end
+		else begin
+		draw_counter_x <= 8'd0;
+		draw_counter_y <= 8'd0;
+		end
+	end
+endmodule
+*/
+
+module control(clk_slow, clk_fast, resetn, key_up, key_down, key_left, key_right,
+				key_space, key_delete, key_num1,key_num2,key_num3,
+				key_num4,key_num5,key_num6, key_num7,key_num8,key_num9, board_occu,
+				cursor_i,cursor_j,cursor_ij,cursor_x, cursor_y,cursor_xold,cursor_yold,data_clr, data_write,input_num,game_running, num_delete,easy_mode, medium_mode, hard_mode,over_page,board_top_plot,start_page,wrong,cursor,earse, isCorrect);
+    input clk_slow;
+	input clk_fast;
+    input resetn;
+	
+    input key_up; 
+	input key_down;
+	input key_left;
+	input key_right;
+	
+	input key_space;
+	input key_delete;
+	
+	input key_num1;
+	input key_num2;
+	input key_num3;
+	input key_num4;
+	input key_num5;
+	input key_num6;
+	input key_num7;
+	input key_num8;
+	input key_num9;
+	input [323:0] board_occu;
+	
+    
+	output reg [3:0] cursor_i;
+	output reg [3:0] cursor_j; 
+	output reg  [8:0] cursor_ij; 
+	output reg [9:0] cursor_x;
+	output reg [8:0] cursor_y;
+	output reg [9:0] cursor_xold;
+	output reg [8:0] cursor_yold;
+	
+	output reg data_clr;
+	output reg data_write;
+	output reg [3:0]input_num;
+    output reg game_running;
+    output reg num_delete;
+    output reg easy_mode;
+    output reg medium_mode;
+    output reg hard_mode;
+	output reg over_page;
+	output reg board_top_plot;
+	output reg start_page;
+	output reg wrong;
+	output reg cursor;
+	output  isCorrect;
+	output reg earse;
+	
+	
+	// symbolic state declaration
+	reg [5:0]next_state; 
+    
+	localparam 
+					
+					s_newgame=5'd0,
+					//s_easy=5'd1;
+					//s_medium=5'd2;
+					//s_hard=5'd3;
+					
+					s_move_cursor=5'd1,
+					s_put_num=5'd2,
+					s_put_end=5'd3,
+					s_check=5'd4,
+					
+					//s_wait=5'd5;
+					//s_decide=5'd6,
+					s_wrongans=5'd5,
+					
+					s_gameover=5'd6;
+
+	
+	//cheker to check if the input number is correct
+	
+	
+	//wire [3:0]input_row, input_col;
+	
+	always@(*)
+	begin
+		if (!resetn)begin
+			cursor_i = 4'd4;
+        cursor_j = 4'd4;
+		  cursor_ij=9'd160;
+		  cursor_x= 10'd106;
+		  cursor_y= 9'd118;
+		  cursor_xold = 10'd106;
+		 cursor_yold = 9'd118;
+		 
+		end
+		
+		else begin
+		if(key_up && cursor_i >0)begin
+			cursor_i = cursor_i - 4'b1;
+			cursor_ij= cursor_ij - 8'd36;
+			cursor_x= cursor_x;
+			cursor_y= cursor_y - 9'd21;
+			cursor_xold = cursor_x;
+			cursor_yold = cursor_y;
+		end	
+		else if (key_down && cursor_i < 4'd8) begin
+			cursor_i = cursor_i + 1'b1;
+			cursor_ij= cursor_ij + 8'd36;
+						
+						cursor_x= cursor_x;
+						cursor_y= cursor_y + 9'd21;
+						cursor_xold = cursor_x;
+						cursor_yold = cursor_y;
+			end			
+		else if (key_left && cursor_j >0) begin
+			 cursor_j = cursor_j - 4'b1;
+						  cursor_ij= cursor_ij - 8'd16;
+						  cursor_x= cursor_x- 10'd21;
+						  cursor_y= cursor_y;
+						  cursor_xold = cursor_x;
+							cursor_yold = cursor_y;
+		end
+		else if (key_right && cursor_j < 4'd8) begin
+         cursor_j = cursor_j + 4'b1;
+			cursor_ij= cursor_ij + 8'd16;
+			cursor_x= cursor_x+ 10'd21;
+			cursor_y= cursor_y;
+			cursor_xold = cursor_x;
+			cursor_yold = cursor_y;
+		end
+		end
+		
+	end
+	
+	always@(*)
+	begin
+		
+		if(key_num1)
+			input_num=4'd1;
+		else if (key_num2) 
+			input_num=4'd2;
+		else if (key_num3) 
+			input_num=4'd3;
+		else if (key_num4) 
+			input_num=4'd4;
+		else if (key_num5) 
+			input_num=4'd5;
+		else if (key_num6) 
+			input_num=4'd6;
+		else if (key_num7) 
+			input_num=4'd7;
+		else if (key_num8) 
+			input_num=4'd8;
+		else if (key_num9) 
+			input_num=4'd9;
+		else
+			input_num=4'd0;
+	end
+	
+	
+	
+	
+	
+	checker check(clk_fast, resetn, input_num, cursor_i,cursor_j, isCorrect);
+
+	
+	 //===================================				
+	 //  FSMD		
+    //===================================
+    //  FSMD state & data registers
+    
+	 
+	 
+	 
+    //wire isCorrect;
+    
+	 reg [7:0]put_count;
+	//reg data_clr;
+	
+    // FSMD next-state logic
+    always@(posedge clk_slow or negedge resetn)
+    begin
+	 if  (!resetn)begin
+			cursor <= 1'b0;
+			earse <=1'b0;
+			/*
+ 		  cursor_i <= 4'd4;
+        cursor_j <= 4'd4;
+		  cursor_ij<=9'd160;
+		  cursor_x<= 10'd0;
+		  cursor_y<= 9'd0;
+		  cursor_xold <= 10'd106;
+		 cursor_yold <= 9'd118;
+		 */
+        start_page<=1'b0;
+        over_page<=1'b0;
+        game_running <=1'b0;
+        easy_mode<=1'b0;
+        medium_mode<=1'b0;
+        hard_mode<=1'b0;
+        
+        num_delete<=1'b0;
+        put_count <= 8'b0;
+        
+		  
+		  board_top_plot<=1'b0;
+		  //board_bot_plot<=1'b0;
+		  //num1_plot<=1'b0;
+		  //num2_plot<=1'b0;
+		  //num3_plot<=1'b0;
+		  //num4_plot<=1'b0;
+		  //num5_plot<=1'b0;
+		  //num6_plot<=1'b0;
+		  //num7_plot<=1'b0;
+		  //num8_plot<=1'b0;
+		  //num9_plot<=1'b0;
+		  wrong<=1'b0;
+		  //winning_page_plot<=1'b0;
+		  
+		  
+        //start_render_board<=1'b0;
+		  
+			//erase_complete<=1'b0;
+		//board_render_complete<=1'b0;
+		  
+		  
+        //plot_num1<=1'b1;
+        //clear_screen<=1'b0
+        
+        data_clr<=1'b1;//clear
+        data_write<=1'b0;
+        next_state <= s_newgame;
+        end
+     else  begin  
+        case (next_state)
+			s_newgame: 
+				begin
+					start_page<=1'b1;
+					over_page<=1'b0;
+					if(key_space)
+					begin
+						
+						cursor<=1'b0;
+						earse <=1'b0;
+						/*
+						cursor_i <= 4'd4;
+        				cursor_j <= 4'd4;
+						cursor_ij<= 9'd160;
+						cursor_x<= 10'd106;
+						cursor_y<= 9'd118;
+						cursor_xold <= 10'd106;
+						cursor_yold <= 9'd118;
+						*/
+        				put_count <= 8'b0;
+        				data_clr<=1'b0;
+						
+						start_page<=1'b0;
+						board_top_plot<=1'b1;
+						//board_bot_plot<=1'b1;
+        				
+        				//plot_num1<=1'b0;
+						//clear_screen<=1'b1;
+						
+						next_state <= s_move_cursor;
+					end
+					
+					
+					else
+						next_state <= s_newgame;
+				end
+				//23,33 first
+				//upp 108,97
+				//left 87,118
+				//right 129,118
+				//down 108,139
+				//108,118 centre
+				/*
+			s_wait:begin
+			if()begin
+			next_state <= s_move_cursor;
+			end
+			else begin
+			board_top_plot<=1'b1;
+			next_state <= s_wait;
+			end
+			end*/
+			
+			s_move_cursor: 
+				begin
+					//board_top_plot<=1'b0;
+					earse <=1'b0;
+					                                      
+					data_clr<=1'b0;
+					num_delete<=1'b0;
+					cursor<=1'b0;
+					//move the cursor
+					if((key_up && cursor_i >0) || (key_down && cursor_i < 4'd8) || (key_left && cursor_j > 0) || (key_right && cursor_j < 4'd8))	
+					//if(key_up || key_down || key_left || key_right)
+						earse <=1'b1;
+					
+					if (key_num1 || key_num2 || key_num3 || key_num4 || key_num5 || key_num6 || key_num7 || key_num8 || key_num9)
+                        next_state <= s_put_num;
+               else
+                	next_state <= s_move_cursor;
+               
+										
+				end
+			
+			s_put_num:
+				begin
+					
+				// Check if the position is occupied. If not, put the chess
+                						
+						if (board_occu[cursor_ij]==1'b0) 
+						begin
+                    	put_count <= put_count + 8'b1;
+                    	data_write <= 1'b1;
+                    	next_state <= s_put_end;
+                	end
+						
+						
+                	else
+                    	next_state <= s_move_cursor;
+                end
+            
+            s_put_end: 
+            	begin
+            	data_write <= 1'b0;
+            	next_state <= s_check;
+            
+					end
+            s_check:
+            	begin
+            	// Check if the input number is correct or the game is over;
+            	
+            	if (put_count == 8'd81 - 8'd35)
+            		next_state <= s_gameover;
+            	else
+            		begin
+            		if(isCorrect) begin
+							wrong<=1'b0;
+            			next_state <= s_move_cursor;
+							end
+            		else
+							
+            			next_state <= s_wrongans;
+            		end
+					end
+            
+            s_wrongans:
+            	begin
+            	wrong<=1'b1;
+            	//??????????????
+				//if key=1,2,3,4,5, not key_ok
+            	if(key_num1 || key_num2 || key_num3 || key_num4 || key_num5 || key_num6 || key_num7 || key_num8 || key_num9)
+            		next_state <= s_check;
+            	else if(key_delete) begin
+						wrong<=1'b1;
+            		num_delete<=1'b1;
+            		next_state <= s_wrongans;
+						end
+            	else if(key_up || key_down|| key_left|| key_right)
+						next_state <= s_move_cursor;
+            	end
+            
+            s_gameover:
+            	begin
+            	//easy_mode<=1'b0;
+        		//medium_mode<=1'b0;
+        		//hard_mode<=1'b0;
+					game_running <= 1'b0;
+            	if(key_space)begin
+						start_page<=1'b1;
+            		next_state <= s_newgame;
+						end
+            	else
+            		over_page<=1'b1;
+            		next_state <=s_gameover;
+               end
+        endcase
+    end
+	 end
+endmodule
+        
+ module checker(clk, clr, input_num, input_row, input_col, isCorrect);
+	input clk;
+	input clr;
+	input [3:0]input_num;
+	input [3:0]input_row;
+	input [3:0]input_col;
+	output reg isCorrect;
+	wire [3:0]template_grid[8:0][8:0];
+	
+	assign template_grid[0][0] = 4'd9;
+	assign template_grid[0][1] = 4'd8;
+	assign template_grid[0][2] = 4'd7;
+	assign template_grid[0][3] = 4'd6;
+	assign template_grid[0][4] = 4'd2;
+	assign template_grid[0][5] = 4'd5;
+	assign template_grid[0][6] = 4'd4;
+	assign template_grid[0][7] = 4'd3;
+	assign template_grid[0][8] = 4'd1;
+	assign template_grid[1][0] = 4'd3;
+	assign template_grid[1][1] = 4'd1;
+	assign template_grid[1][2] = 4'd5;
+	assign template_grid[1][3] = 4'd4;
+	assign template_grid[1][4] = 4'd9;
+	assign template_grid[1][5] = 4'd7;
+	assign template_grid[1][6] = 4'd6;
+	assign template_grid[1][7] = 4'd2;
+	assign template_grid[1][8] = 4'd8;
+	assign template_grid[2][0] = 4'd2;
+	assign template_grid[2][1] = 4'd4;
+	assign template_grid[2][2] = 4'd6;
+	assign template_grid[2][3] = 4'd1;
+	assign template_grid[2][4] = 4'd3;
+	assign template_grid[2][5] = 4'd8;
+	assign template_grid[2][6] = 4'd5;
+	assign template_grid[2][7] = 4'd9;
+	assign template_grid[2][8] = 4'd7;
+	assign template_grid[3][0] = 4'd5;
+	assign template_grid[3][1] = 4'd3;
+	assign template_grid[3][2] = 4'd9;
+	assign template_grid[3][3] = 4'd2;
+	assign template_grid[3][4] = 4'd8;
+	assign template_grid[3][5] = 4'd1;
+	assign template_grid[3][6] = 4'd7;
+	assign template_grid[3][7] = 4'd4;
+	assign template_grid[3][8] = 4'd6;
+	assign template_grid[4][0] = 4'd6;
+	assign template_grid[4][1] = 4'd7;
+	assign template_grid[4][2] = 4'd1;
+	assign template_grid[4][3] = 4'd3;
+	assign template_grid[4][4] = 4'd4;
+	assign template_grid[4][5] = 4'd9;
+	assign template_grid[4][6] = 4'd8;
+	assign template_grid[4][7] = 4'd5;//
+	assign template_grid[4][8] = 4'd2;
+	assign template_grid[5][0] = 4'd4;
+	assign template_grid[5][1] = 4'd2;
+	assign template_grid[5][2] = 4'd8;
+	assign template_grid[5][3] = 4'd5;
+	assign template_grid[5][4] = 4'd7;
+	assign template_grid[5][5] = 4'd6;
+	assign template_grid[5][6] = 4'd3;
+	assign template_grid[5][7] = 4'd1;
+	assign template_grid[5][8] = 4'd9;
+	assign template_grid[6][0] = 4'd7;
+	assign template_grid[6][1] = 4'd5;
+	assign template_grid[6][2] = 4'd3;
+	assign template_grid[6][3] = 4'd9;
+	assign template_grid[6][4] = 4'd6;
+	assign template_grid[6][5] = 4'd2;
+	assign template_grid[6][6] = 4'd1;
+	assign template_grid[6][7] = 4'd8;
+	assign template_grid[6][8] = 4'd4;
+	assign template_grid[7][0] = 4'd8;
+	assign template_grid[7][1] = 4'd9;//////
+	assign template_grid[7][2] = 4'd4;
+	assign template_grid[7][3] = 4'd7;
+	assign template_grid[7][4] = 4'd1;
+	assign template_grid[7][5] = 4'd3;
+	assign template_grid[7][6] = 4'd2;
+	assign template_grid[7][7] = 4'd6;
+	assign template_grid[7][8] = 4'd5;
+	assign template_grid[8][0] = 4'd1;
+	assign template_grid[8][1] = 4'd6;
+	assign template_grid[8][2] = 4'd2;
+	assign template_grid[8][3] = 4'd8;
+	assign template_grid[8][4] = 4'd5;
+	assign template_grid[8][5] = 4'd4;
+	assign template_grid[8][6] = 4'd9;
+	assign template_grid[8][7] = 4'd7;
+	assign template_grid[8][8] = 4'd3;
+	
+	//input [3:0]input_grid[8:0][8:0];
+	
+	//template answer(template_grid);
+	
+	always@(posedge clk) begin
+    	if (!clr) begin
+        	isCorrect = 0;
+        end
+        else if(input_num==template_grid[input_row][input_col])
+        	isCorrect = 1'b1;
+	end
+endmodule       
+
+        
+        
+module sudoku_datapath(clk,rst,clear,write,write_ij, write_num,easy_mode, medium_mode, hard_mode, board_out);
+   input clk;
+   input rst;
+   input clear;
+   input write; //enable-write signal
+   
+   input [8:0] write_ij;
+   input [3:0] write_num;
+   input easy_mode;
+   input medium_mode;
+   input hard_mode;
+   output [323:0] board_out ;		//row info for logic
+   reg [323:0] board_occu;
+   
+    
+    
+    always @ (negedge clk or negedge rst) begin
+        if (!rst ) begin
+        	
+            board_occu[3:0] <= 4'd9;
+			 	board_occu[7:4] <= 4'd0;
+			 	board_occu[11:8] <= 4'd0;
+			 	board_occu[15:12] <= 4'd0;
+			 	board_occu[19:16] <= 4'd2;
+				board_occu[23:20] <= 4'd0;
+			 	board_occu[27:24] <= 4'd4;
+			 	board_occu[31:28] <= 4'd0;
+			 	board_occu[35:32] <= 4'd1;
+			 
+				board_occu[39:36] <= 4'd0;
+			 	board_occu[43:40] <= 4'd0;
+				board_occu[47:44] <= 4'd5;
+			 	board_occu[51:48] <= 4'd0;
+			 	board_occu[55:52] <= 4'd9;
+			 	board_occu[59:56] <= 4'd0;
+			 	board_occu[63:60] <= 4'd0;
+			 	board_occu[67:64] <= 4'd2;
+			 	board_occu[71:68] <= 4'd0;
+			 
+				board_occu[75:72] <= 4'd0;
+			 	board_occu[79:76] <= 4'd4;
+			 	board_occu[83:80] <= 4'd0;
+			 	board_occu[87:84] <= 4'd1;
+			 	board_occu[91:88] <= 4'd0;
+			 	board_occu[95:92] <= 4'd0;
+			 	board_occu[99:96] <= 4'd0;
+			 	board_occu[103:100] <= 4'd9;
+			 	board_occu[107:104] <= 4'd7;
+			 
+			 	board_occu[111:108] <= 4'd5;
+			 	board_occu[115:112] <= 4'd0;
+			 	board_occu[119:116] <= 4'd0;
+			 	board_occu[123:120] <= 4'd0;
+			 	board_occu[127:124] <= 4'd0;
+				board_occu[131:128] <= 4'd1;
+			 	board_occu[135:132] <= 4'd0;
+			 	board_occu[139:136] <= 4'd0;
+			 	board_occu[143:140] <= 4'd0;
+			 
+			 	board_occu[147:144] <= 4'd0;
+			 	board_occu[151:148] <= 4'd0;
+			 	board_occu[155:152] <= 4'd0;
+			 	board_occu[159:156] <= 4'd0;
+			 	board_occu[163:160] <= 4'd0;
+			 	board_occu[167:164] <= 4'd0;
+			 	board_occu[171:168] <= 4'd0;
+			 	board_occu[175:172] <= 4'd0;
+			 	board_occu[179:176] <= 4'd2;
+			 
+			 	board_occu[183:180] <= 4'd4;
+			 	board_occu[187:184] <= 4'd0;
+			 	board_occu[191:188] <= 4'd0;
+			 	board_occu[195:192] <= 4'd5;
+			 	board_occu[199:196] <= 4'd7;
+			 	board_occu[203:200] <= 4'd0;
+			 	board_occu[207:204] <= 4'd3;
+			 	board_occu[211:208] <= 4'd0;
+			 	board_occu[215:212] <= 4'd9;
+			 
+			 	board_occu[219:216] <= 4'd0;
+			 	board_occu[223:220] <= 4'd5;
+			 	board_occu[227:224] <= 4'd3;
+			 	board_occu[231:228] <= 4'd0;
+			 	board_occu[235:232] <= 4'd0;
+			 	board_occu[239:236] <= 4'd2;
+			 	board_occu[243:240] <= 4'd1;
+			 	board_occu[247:244] <= 4'd8;
+			 	board_occu[251:248] <= 4'd0;
+			 
+			 	board_occu[255:252] <= 4'd0;
+			 	board_occu[259:256] <= 4'd0;
+			 	board_occu[263:260] <= 4'd0;
+			 	board_occu[267:264] <= 4'd0;
+			 	board_occu[271:268] <= 4'd0;
+			 	board_occu[275:272] <= 4'd0;
+			 	board_occu[279:276] <= 4'd0;
+			 	board_occu[283:280] <= 4'd0;
+			 	board_occu[287:284] <= 4'd0;
+			 
+			 	board_occu[291:288] <= 4'd0;
+			 	board_occu[295:292] <= 4'd0;
+			 	board_occu[299:296] <= 4'd2;
+			 	board_occu[303:300] <= 4'd8;
+			 	board_occu[307:304] <= 4'd0;
+			 	board_occu[311:308] <= 4'd0;
+			 	board_occu[315:312] <= 4'd0;
+			 	board_occu[319:316] <= 4'd0;
+			 	board_occu[323:320] <= 4'd3;
+			end
+		
+        else if (write)
+            //board_default[write_i][write_j] <= write_num;
+				board_occu[write_ij] <= write_num[0];
+				board_occu[write_ij+9'd1] <= write_num[1];
+				board_occu[write_ij+9'd2] <= write_num[2];
+				board_occu[write_ij+9'd3] <= write_num[3];
+				
+    end
+	 assign board_out=board_occu[323:0];
+endmodule
+
+module clk_divider(clk, rst, clk_div);
+	input clk;
+	input rst;
+	output reg[31:0] clk_div;
+	always @(posedge clk or negedge rst)
+		if(!rst)
+			clk_div<=32'b0;
+		else
+			clk_div<=clk_div+1;
+endmodule
+
+
+/*module display_num(clk,input_num,board_top_plot, start_page, over_page, cursor_x, cursor_y,cursor_xold,cursor_yold, data_write,num_delete,earse,wrong,color, x,y, writeEn);
+ input clk,wrong;
+  input board_top_plot,start_page, over_page;
+ input data_write;
+ input num_delete;
+ input earse;
+ input [3:0]input_num;
+ 
+ input [9:0] cursor_x;
+ input [8:0] cursor_y;
+ input [9:0] cursor_xold;
+ input [8:0] cursor_yold;
+ 
+ output reg [5:0]color;
+ output reg [9:0]x;
+ output reg [8:0]y;
+
+ output reg writeEn;
+
+ reg [9:0] x0bt, x0bb,x0st, x0sb, x0wt, x0wb;
+ reg [8:0] y0bt, y0bb,y0st, y0sb, y0wt, y0wb;
+ 
+//draw gameboard
+ wire [9:0]xbtCount, xbbCount;
+ wire [8:0]ybtCount,ybbCount;
+ wire [15:0]btaddress, bbaddress;
+ wire [5:0]btcolor, bbcolor;
+ wire done1,done2;
+ btop ggg(btaddress, clk, btcolor);
+ bbot gg(bbaddress, clk, bbcolor);
+ draw_board b1(clk, board_top_plot, xbtCount, ybtCount, btaddress, done1);
+ draw_board b2(clk, done1, xbbCount, ybbCount, bbaddress, done2);
+ 
+ //draw startpage
+ wire [9:0]xstCount, xsbCount;
+ wire [8:0]ystCount,ysbCount;
+ wire [15:0]staddress, sbaddress;
+ wire [5:0]stcolor, sbcolor;
+ wire done3,done4;
+ starttop st(staddress, clk, stcolor);
+ startbot sb(sbaddress, clk, sbcolor);
+ draw_board s1(clk, start_page, xstCount, ystCount, staddress, done3);//enable1?
+ draw_board s2(clk, done3, xsbCount, ysbCount, sbaddress, done4);
+ 
+ //draw winpage
+ wire [9:0]xwtCount, xwbCount;
+ wire [8:0]ywtCount,ywbCount;
+ wire [15:0]wtaddress, wbaddress;
+ wire [5:0]wtcolor, wbcolor;
+ wire done5,done6;
+ wintop stttt(wtaddress, clk, wtcolor);
+ winbot sbbbb(wbaddress, clk, wbcolor);
+ draw_board w1(clk, over_page, wstCount, wstCount, wtaddress, done5);//enable2?
+ draw_board w2(clk, done5, wsbCount, wsbCount, wbaddress, done6);
+ 
+ 
+//buggggggg here no initial
+ initial begin
+   //gameboard
+ 	x0bt<=0;
+ 	y0bt<=0;
+ 	x0bb<=0;
+ 	y0bb<=9'd120;
+	
+	//startpage
+	x0st<=0;
+ 	y0st<=0;
+ 	x0sb<=0;
+ 	y0sb<=9'd120;
+	
+	//winpage
+	x0wt<=0;
+ 	y0wt<=0;
+ 	x0wb<=0;
+ 	y0wb<=9'd120;
+	
+ end
+
+
+ 
+ reg [9:0]num_x;
+ reg [8:0]num_y;
+
+ 
+ wire [4:0] xCount1,xCount2,xCount3,xCount4,xCount5,xCount6,xCount7,xCount8,xCount9,xCount0;
+ wire [4:0] yCount1,yCount2,yCount3,yCount4,yCount5,yCount6,yCount7,yCount8,yCount9,yCount0;
+ wire [4:0] xCounti1,xCounti2,xCounti3,xCounti4,xCounti5,xCounti6,xCounti7,xCounti8,xCounti9;
+ wire [4:0] yCounti1,yCounti2,yCounti3,yCounti4,yCounti5,yCounti6,yCounti7,yCounti8,yCounti9;
+ wire [4:0] xCountc1,xCountc2,xCountc3,xCountc4,xCountc5,xCountc6,xCountc7,xCountc8,xCountc9,xCountc0;
+ wire [4:0] yCountc1,yCountc2,yCountc3,yCountc4,yCountc5,yCountc6,yCountc7,yCountc8,yCountc9,yCountc0;
+ wire [8:0]  address1,address2,address3,address4,address5,address6,address7,address8,address9,address0;
+ wire [8:0]  addressi1,addressi2,addressi3,addressi4,addressi5,addressi6,addressi7,addressi8,addressi9;
+ wire [8:0]  addressc1,addressc2,addressc3,addressc4,addressc5,addressc6,addressc7,addressc8,addressc9,addressc0;
+ wire [5:0] color1,color2,color3,color4,color5,color6,color7,color8,color9,color0;
+ wire [5:0] colori1,colori2,colori3,colori4,colori5,colori6,colori7,colori8,colori9;
+ wire [5:0] curr1_color,curr2_color,curr3_color,curr4_color,curr5_color,curr6_color,curr7_color,curr8_color,curr9_color;
+ wire [9:0] done,donei,donec;
+ 
+ initial begin
+	num_x <= cursor_x+1;
+	num_y <= cursor_y+1;
+ end 
+ 
+ num1 n1(address1, clk, color1);
+ num2 n2(address2, clk, color2);
+ num3 n3(address3, clk, color3);
+ num4 n4(address4, clk, color4);
+ num5 n5(address5, clk, color5);
+ num6 n6(address6, clk, color6);
+ num7 n7(address7, clk, color7);
+ num8 n8(address8, clk, color8);
+ num9 n9(address9, clk, color9);
+ blk n0(address0, clk, color0);//blank box
+ 
+ drawNum n1d(clk, data_write, xCount1, yCount1, address1, done[0]);
+ drawNum n2d(clk, data_write, xCount2, yCount2, address2, done[1]);
+ drawNum n3d(clk, data_write, xCount3, yCount3, address3, done[2]);
+ drawNum n4d(clk, data_write, xCount4, yCount4, address4, done[3]);
+ drawNum n5d(clk, data_write, xCount5, yCount5, address5, done[4]);
+ drawNum n6d(clk, data_write, xCount6, yCount6, address6, done[5]);
+ drawNum n7d(clk, data_write, xCount7, yCount7, address7, done[6]);
+ drawNum n8d(clk, data_write, xCount8, yCount8, address8, done[7]);
+ drawNum n9d(clk, data_write, xCount9, yCount9, address9, done[8]);
+ drawNum n0d(clk, data_write, xCount0, yCount0, address0, done[9]);
+ 
+ incorrect1 ni1(addressi1, clk, colori1);
+ incorrect2 ni2(addressi2, clk, colori2);
+ incorrect3 ni3(addressi3, clk, colori3);
+ incorrect4 ni4(addressi4, clk, colori4);
+ incorrect5 ni5(addressi5, clk, colori5);
+ incorrect6 ni6(addressi6, clk, colori6);
+ incorrect7 ni7(addressi7, clk, colori7);
+ incorrect8 ni8(addressi8, clk, colori8);
+ incorrect9 ni9(addressi9, clk, colori9);
+ 
+ drawNum n1w(clk, wrong, xCounti1, yCounti1, addressi1, donei[0]);
+ drawNum n2w(clk, wrong, xCounti2, yCounti2, addressi2, donei[1]);
+ drawNum n3w(clk, wrong, xCounti3, yCounti3, addressi3, donei[2]);
+ drawNum n4w(clk, wrong, xCounti4, yCounti4, addressi4, donei[3]);
+ drawNum n5w(clk, wrong, xCounti5, yCounti5, addressi5, donei[4]);
+ drawNum n6w(clk, wrong, xCounti6, yCounti6, addressi6, donei[5]);
+ drawNum n7w(clk, wrong, xCounti7, yCounti7, addressi7, donei[6]);
+ drawNum n8w(clk, wrong, xCounti8, yCounti8, addressi8, donei[7]);
+ drawNum n9w(clk, wrong, xCounti9, yCounti9, addressi9, donei[8]);
+ 
+ wire [4:0] xCounth1,xCounth2;
+ wire [1:0] yCounth1,yCounth2;
+ wire [1:0] xCountv1,xCountv2;
+ wire [4:0] yCountv1,yCountv2;
+ wire [5:0] colorh1,colorh2,colorv1,colorv2;
+ wire [4:0] addressh1,addressh2,addressv1,addressv2;
+ wire doneh1,doneh2,donev1,donev2;
+ row17 h17(addressh1, clk, colorh1);
+ row17 h171(addressh2, clk, colorh2);
+ col19 c19(addressv1, clk, colorv1);
+ col19 c191(addressv2, clk, colorv2);
+ 
+ draw_gridh h1(clk, cursor, xCounth1, yCounth1, addressh1, doneh1); 
+ draw_gridh h2(clk, doneh1, xCounth2, yCounth2, addressh2, doneh2); 
+ draw_gridv v1(clk, doneh2, xCountv1, yCountv1, addressv1, donev1); 
+ draw_gridv v2(clk, donev1, xCountv2, yCountv2, addressv2, donev2); 
+ 
+ 
+ reg inB;
+ reg inC;
+ 
+ always@(posedge clk) begin
+	//startpage
+	if (start_page) begin
+		x <= xstCount+x0st;
+		y <= ystCount+y0st;
+		color <= sbcolor;
+		writeEn <= 1'b1;
+	 if(done3) begin
+		x <= xsbCount+x0sb;
+		y <= ysbCount+y0sb;
+		color <= sbcolor;
+		writeEn <= 1'b1;
+		end
+	end
+//gameboard
+	else if (board_top_plot) begin
+	
+		writeEn <= 1'b1;
+		x <= xbtCount+x0bt;
+		y <= ybtCount+y0bt;
+		color <= btcolor;
+		//color <= 6'b110000;
+		//in <= 1'b1;
+		if(done1) begin
+			x <= xbbCount+x0bb;
+			y <= ybbCount+y0bb;
+			color <= bbcolor;
+			inB<=1'b1;
+		//	color <= 6'b111110;
+		//	in <= 1'b0;
+		end
+		
+	end
+
+	
+ //winpage
+	else if (over_page) begin
+		writeEn <= 1'b1;
+			x <= xwtCount+x0wt;
+			y <= ywtCount+y0wt;
+			color <= wtcolor;
+		if(done5) begin
+			x <= xwbCount+x0wb;
+			y <= ywbCount+y0wb;
+			color <= wbcolor;
+		end
+	end
+	
+			
+
+	else if (done2 && cursor) begin
+			writeEn <= 1'b1;
+			inC<=1'b1;
+			x <= xCounth1+cursor_x;//horizontal 1
+			y <= yCounth1+cursor_y;
+			color <= colorh1;
+			  if(doneh1)  begin
+			  x <= xCounth2+cursor_x;//horizontal 2
+			  y <= yCounth2+cursor_y+5'd18;
+			  color <= colorh2;
+			     if(doneh2)  begin
+		       	x <= xCountv1+cursor_x;//veritcal 1
+		      	y <= yCountv1+cursor_y;
+			      color <= colorv1;
+	              if(donev1)  begin
+			         x <= xCountv2+cursor_x+5'd18;//veritcal 1
+		         	y <= yCountv2+cursor_y;
+			         color <= colorv2;
+						
+			         end
+					end
+				end
+			end
+	
+	else if (donev2 && earse) begin
+		writeEn <= 1'b1;
+			x <= xCounth1+cursor_x;//horizontal 1
+			y <= yCounth1+cursor_y;
+			color <= 6'b111111;
+			  if(doneh1)  begin
+			  x <= xCounth2+cursor_x;//horizontal 2
+			  y <= yCounth2+cursor_y+5'd18;
+			  color <= 6'b111111;
+			     if(doneh2)  begin
+		       	x <= xCountv1+cursor_x;//veritcal 1
+		      	y <= yCountv1+cursor_y;
+			      color <= 6'b111111;
+	              if(donev1)  begin
+			         x <= xCountv2+cursor_x+5'd18;//veritcal 1
+		         	y <= yCountv2+cursor_y;
+			         color <= 6'b111111;
+			         end
+					end
+				end
+			end
+	
+	else if (data_write) begin
+		writeEn <= 1'b1; 
+			
+		  if(input_num==4'd1)begin
+				x<=xCount1 + num_x;
+				y<=yCount1 + num_y;
+					if (wrong)begin
+						if (num_delete)
+							color <= 6'b111111;
+						else 
+							color <= colori1;
+							//color <= 6'b011111;
+						end
+					else
+						color <= color1;
+						//color <= 6'b000111;
+				end
+			else if(input_num==4'd2)begin
+					x<=xCount2 + num_x;
+				   y<=yCount2 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+			 			   	color <= 6'b111111;
+						   else 
+						   	color <= colori2;
+						end
+					else
+						color <= color2;
+					end
+			   else if(input_num==4'd3)begin
+					x<=xCount3 + num_x;
+				   y<=yCount3 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori3;
+					   	end
+				   	else
+					   	color <= color3;
+					   end
+		  	   else if(input_num==4'd4)begin
+					x<=xCount4 + num_x;
+				   y<=yCount4 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori5;
+					   	end
+					else
+						color <= color4;
+					end
+			   else if(input_num==4'd5)begin
+					x<=xCount5 + num_x;
+				   y<=yCount5 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori5;
+					   	end
+					else
+						color <= color5;
+					end
+			   else if(input_num==4'd6)begin
+					x<=xCount6 + num_x;
+				   y<=yCount6 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori6;
+					   	end
+					else
+						color <= color6;
+					end
+			   else if(input_num==4'd7)begin
+					x<=xCount7 + num_x;
+				   y<=yCount7 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori7;
+					   	end
+					else
+						color <= color7;
+					end
+			   else if(input_num==4'd8)begin
+					x<=xCount8 + num_x;
+				   y<=yCount8 + num_y;
+				   	if (wrong)begin
+						   if (num_delete)
+							   color <= 6'b111111;
+					   	else 
+						   	color <= colori8;
+					   	end
+					else
+						color <= color8;
+					end
+			   else if(input_num==4'd9)begin
+				   x<=xCount9 + num_x;
+				   y<=yCount9 + num_y;
+				   if (wrong) begin
+						if (num_delete)
+							color <= 6'b111111;
+						else 
+							color <= colori9;
+						end
+					else
+						color <= color9;
+					end
+		else 
+		 writeEn <= 1'b0; 
+			end
+			
+	end
+endmodule
+*/
